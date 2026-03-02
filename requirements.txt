@@ -1,0 +1,13 @@
+# This is a React/Node.js project. 
+# The primary dependency file is package.json.
+# Below are the core libraries used:
+
+react>=18.2.0
+react-dom>=18.2.0
+xlsx>=0.18.5
+html2canvas>=1.4.1
+jspdf>=2.5.1
+jszip>=3.10.1
+file-saver>=2.0.5
+lucide-react>=0.344.0
+vite>=5.2.0
