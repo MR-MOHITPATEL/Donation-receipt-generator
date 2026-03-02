@@ -128,7 +128,7 @@ const App = () => {
             </div>
 
             <footer style={{ textAlign: 'center', marginTop: '4rem', color: '#999', fontSize: '0.875rem' }}>
-                <p>© 2024 NGO Receipt Generator. No data is stored on any server.</p>
+                <p>© 2026 NGO Receipt Generator. No data is stored on any server.</p>
             </footer>
 
             {isGenerating && (
