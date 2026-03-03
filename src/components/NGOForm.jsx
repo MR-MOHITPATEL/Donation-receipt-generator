@@ -1,153 +1,162 @@
-import React, { useState } from 'react';
-import { Upload } from 'lucide-react';
+import React from 'react';
+import { Building2, FileText, User, Upload } from 'lucide-react';
 
-const NGOForm = ({ ngoData, updateNgoData }) => {
-    const [logoPreview, setLogoPreview] = useState(ngoData.logo || null);
-
+const NGOForm = ({ ngoData, setNgoData, errors }) => {
     const handleChange = (e) => {
         const { name, value } = e.target;
-        updateNgoData({ [name]: value });
+        // PAN should always be uppercase
+        const finalValue = name === 'panNumber' ? value.toUpperCase() : value;
+        setNgoData(prev => ({ ...prev, [name]: finalValue }));
     };
 
     const handleLogoUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file (PNG/JPG)');
+                return;
+            }
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setLogoPreview(reader.result);
-                updateNgoData({ logo: reader.result });
+            reader.onload = (event) => {
+                setNgoData(prev => ({ ...prev, logo: event.target.result }));
             };
             reader.readAsDataURL(file);
         }
     };
 
     return (
-        <div className="card">
-            <h2 style={{ marginBottom: '1.5rem' }}>Step 2: NGO Details</h2>
-            <form>
-                <div className="grid grid-cols-2" style={{ gap: '1.5rem' }}>
-                    <div className="form-group">
-                        <label>NGO Name *</label>
-                        <input
-                            type="text"
-                            name="name"
-                            value={ngoData.name}
-                            onChange={handleChange}
-                            placeholder="Enter NGO Name"
-                            required
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Registration Number *</label>
-                        <input
-                            type="text"
-                            name="regNumber"
-                            value={ngoData.regNumber}
-                            onChange={handleChange}
-                            placeholder="e.g. 1234/2023"
-                            required
-                        />
-                    </div>
-                </div>
+        <div>
+            <h2 className="section-title">Step 2: NGO Details</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                Fill in your official NGO information for the receipts.
+            </p>
 
+            <div className="grid grid-cols-2">
                 <div className="form-group">
-                    <label>NGO Slogan / Tagline</label>
+                    <label><Building2 size={16} inline /> NGO Full Name</label>
                     <input
                         type="text"
-                        name="slogan"
-                        value={ngoData.slogan}
+                        className={`form-control ${errors.name ? 'error' : ''}`}
+                        name="name"
+                        value={ngoData.name}
                         onChange={handleChange}
-                        placeholder="e.g. Empowering Lives, Building Futures"
+                        placeholder="e.g. Save The Children NGO"
                     />
+                    {errors.name && <p className="error-text">{errors.name}</p>}
                 </div>
 
                 <div className="form-group">
-                    <label>Full Address *</label>
-                    <textarea
-                        name="address"
-                        value={ngoData.address}
+                    <label><FileText size={16} inline /> Registration Number</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        name="regNumber"
+                        value={ngoData.regNumber}
                         onChange={handleChange}
-                        placeholder="Full Postal Address"
-                        rows="3"
-                        required
-                        style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '6px' }}
-                    ></textarea>
+                        placeholder="NGO/REG/0001"
+                    />
+                    {errors.regNumber && <p className="error-text">{errors.regNumber}</p>}
                 </div>
+            </div>
 
-                <div className="grid grid-cols-2" style={{ gap: '1.5rem' }}>
-                    <div className="form-group">
-                        <label>80G Number *</label>
-                        <input
-                            type="text"
-                            name="eightyGNumber"
-                            value={ngoData.eightyGNumber}
-                            onChange={handleChange}
-                            placeholder="80G/Registration/..."
-                            required
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>PAN Number *</label>
-                        <input
-                            type="text"
-                            name="panNumber"
-                            value={ngoData.panNumber}
-                            onChange={handleChange}
-                            placeholder="ABCDE1234F"
-                            required
-                        />
-                    </div>
-                </div>
+            <div className="form-group">
+                <label>Full Address</label>
+                <textarea
+                    className="form-control"
+                    name="address"
+                    rows="2"
+                    value={ngoData.address}
+                    onChange={handleChange}
+                    placeholder="Main Office, Building No, Street, City, State, PIN"
+                ></textarea>
+                {errors.address && <p className="error-text">{errors.address}</p>}
+            </div>
 
-                <div className="grid grid-cols-2" style={{ gap: '1.5rem' }}>
-                    <div className="form-group">
-                        <label>Signatory Name *</label>
-                        <input
-                            type="text"
-                            name="signatoryName"
-                            value={ngoData.signatoryName}
-                            onChange={handleChange}
-                            placeholder="Name of Authorised Signatory"
-                            required
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Signatory Designation *</label>
-                        <select
-                            name="signatoryDesignation"
-                            value={ngoData.signatoryDesignation}
-                            onChange={handleChange}
-                            required
-                        >
-                            <option value="President">President</option>
-                            <option value="Secretary">Secretary</option>
-                            <option value="Treasurer">Treasurer</option>
-                        </select>
-                    </div>
+            <div className="grid grid-cols-2">
+                <div className="form-group">
+                    <label>PAN Number (Indian Format)</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        name="panNumber"
+                        value={ngoData.panNumber}
+                        onChange={handleChange}
+                        maxLength={10}
+                        placeholder="ABCDE1234F"
+                    />
+                    {errors.panNumber && <p className="error-text">{errors.panNumber}</p>}
                 </div>
 
                 <div className="form-group">
-                    <label>NGO Logo</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                        <div className="logo-preview">
-                            {logoPreview ? (
-                                <img src={logoPreview} alt="Logo preview" />
-                            ) : (
-                                <Upload size={24} color="#999" />
-                            )}
-                        </div>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleLogoUpload}
-                            style={{ border: 'none', padding: '0' }}
-                        />
-                    </div>
-                    <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.5rem' }}>
-                        Recommended: Transparent PNG or high-quality JPG.
-                    </p>
+                    <label>80G Number</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        name="eightyGNumber"
+                        value={ngoData.eightyGNumber}
+                        onChange={handleChange}
+                        placeholder="CIT/80G/001"
+                    />
+                    {errors.eightyGNumber && <p className="error-text">{errors.eightyGNumber}</p>}
                 </div>
-            </form>
+            </div>
+
+            <div className="grid grid-cols-2">
+                <div className="form-group">
+                    <label><User size={16} inline /> Signatory Name</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        name="signatoryName"
+                        value={ngoData.signatoryName}
+                        onChange={handleChange}
+                        placeholder="John Doe"
+                    />
+                    {errors.signatoryName && <p className="error-text">{errors.signatoryName}</p>}
+                </div>
+
+                <div className="form-group">
+                    <label>Signatory Designation</label>
+                    <select
+                        className="form-control"
+                        name="signatoryDesignation"
+                        value={ngoData.signatoryDesignation}
+                        onChange={handleChange}
+                    >
+                        <option>President</option>
+                        <option>Secretary</option>
+                        <option>Trustee</option>
+                        <option>Director</option>
+                    </select>
+                </div>
+            </div>
+
+            <div className="form-group">
+                <label><Upload size={16} inline /> NGO Logo / Letterhead</label>
+                <div className={`uploader-area ${errors.logo ? 'error' : ''}`} style={{ padding: '2rem', background: '#f8fafc', border: '2px dashed var(--border)' }}>
+                    <input
+                        type="file"
+                        onChange={handleLogoUpload}
+                        accept="image/*"
+                        id="logo-upload"
+                        className="hidden"
+                    />
+                    <label htmlFor="logo-upload" style={{ cursor: 'pointer' }}>
+                        {ngoData.logo ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                                <img src={ngoData.logo} alt="Logo Preview" style={{ height: '60px', borderRadius: '4px' }} />
+                                <span>Change Logo</span>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <Upload color="var(--primary)" size={32} />
+                                <p style={{ marginTop: '0.5rem' }}>Click to upload Logo (PNG/JPG)</p>
+                            </div>
+                        )}
+                    </label>
+                </div>
+                {errors.logo && <p className="error-text">{errors.logo}</p>}
+            </div>
         </div>
     );
 };

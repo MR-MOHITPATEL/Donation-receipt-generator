@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
+import { Heart, ChevronRight, ChevronLeft, Download } from 'lucide-react';
 import TemplateSelector from './components/TemplateSelector';
 import NGOForm from './components/NGOForm';
 import ExcelUploader from './components/ExcelUploader';
@@ -6,11 +7,18 @@ import ReceiptPreview from './components/ReceiptPreview';
 import HorizontalReceipt from './components/ReceiptTemplates/HorizontalReceipt';
 import VerticalReceipt from './components/ReceiptTemplates/VerticalReceipt';
 import AlternateHorizontalReceipt from './components/ReceiptTemplates/AlternateHorizontalReceipt';
-import { generatePDFBlob } from './utils/generatePDF';
-import { generateZip } from './utils/generateZip';
-import { Heart, LayoutDashboard, FileText, Download } from 'lucide-react';
+import { generateBulkZip } from './utils/generateZip';
+import { validatePAN, validateNGOName, validateRegNo, validate80G } from './utils/validation';
+
+const steps = [
+    { id: 1, label: 'Templates' },
+    { id: 2, label: 'NGO Details' },
+    { id: 3, label: 'Upload Data' },
+    { id: 4, label: 'Generate' }
+];
 
 const App = () => {
+    const [currentStep, setCurrentStep] = useState(1);
     const [selectedTemplate, setSelectedTemplate] = useState('horizontal');
     const [ngoData, setNgoData] = useState({
         name: '',
@@ -20,147 +28,160 @@ const App = () => {
         panNumber: '',
         signatoryName: '',
         signatoryDesignation: 'President',
-        slogan: '',
         logo: null,
     });
     const [donorData, setDonorData] = useState([]);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [currentDonor, setCurrentDonor] = useState(null);
-    const receiptRef = useRef(null);
+    const [generationProgress, setGenerationProgress] = useState(0);
+    const [errors, setErrors] = useState({});
 
-    const updateNgoData = (data) => {
-        setNgoData({ ...ngoData, ...data });
+    const handleNext = () => {
+        if (validateStep(currentStep)) {
+            setCurrentStep(prev => Math.min(prev + 1, 4));
+        }
     };
 
-    const handleDataParsed = (data) => {
-        setDonorData(data);
+    const handleBack = () => {
+        setCurrentStep(prev => Math.max(prev - 1, 1));
+    };
+
+    const validateStep = (step) => {
+        const newErrors = {};
+
+        if (step === 1) {
+            if (!selectedTemplate) newErrors.template = 'Please select a template';
+        } else if (step === 2) {
+            if (!validateNGOName(ngoData.name)) newErrors.name = 'Valid NGO Name required (min 3 chars)';
+            if (!ngoData.address) newErrors.address = 'Address is required';
+            if (!validateRegNo(ngoData.regNumber)) newErrors.regNumber = 'Registration Number required';
+            if (!validate80G(ngoData.eightyGNumber)) newErrors.eightyGNumber = '80G Number required';
+            if (!validatePAN(ngoData.panNumber)) newErrors.panNumber = 'Invalid PAN format';
+            if (!ngoData.signatoryName) newErrors.signatoryName = 'Signatory Name required';
+            if (!ngoData.logo) newErrors.logo = 'Logo is required';
+        } else if (step === 3) {
+            if (donorData.length === 0) newErrors.donors = 'Please upload a valid Excel file';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     const handleDownloadAll = async () => {
-        if (donorData.length === 0) return;
         setIsGenerating(true);
-
-        const pdfFiles = [];
-
-        // Loop through donors and generate PDFs
-        // We update currentDonor state to render the hidden receipt component
-        // then capture it as a PDF
-        for (let i = 0; i < donorData.length; i++) {
-            const donor = donorData[i];
-            setCurrentDonor(donor);
-
-            // Wait for React to render the component
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            const filename = `${donor.receiptNo}_${donor.name.replace(/\s+/g, '_')}.pdf`;
-            const blob = await generatePDFBlob(receiptRef.current, filename);
-            pdfFiles.push({ blob, name: filename });
+        setGenerationProgress(0);
+        try {
+            await generateBulkZip(donorData, ngoData, selectedTemplate, setGenerationProgress);
+        } catch (err) {
+            alert('Error generating receipts. Please try again.');
+        } finally {
+            setIsGenerating(false);
         }
-
-        await generateZip(pdfFiles, `${ngoData.name.replace(/\s+/g, '_')}_Receipts.zip`);
-        setIsGenerating(false);
-        setCurrentDonor(null);
     };
 
-    const renderSelectedTemplate = () => {
-        if (!currentDonor) return null;
-
-        const props = {
-            ngo: ngoData,
-            donor: currentDonor,
-            receiptRef: receiptRef,
-        };
-
+    const renderSelectedTemplate = (donor) => {
+        const props = { ngo: ngoData, donor };
         switch (selectedTemplate) {
-            case 'horizontal':
-                return <HorizontalReceipt {...props} />;
-            case 'vertical':
-                return <VerticalReceipt {...props} />;
-            case 'alternate':
-                return <AlternateHorizontalReceipt {...props} />;
-            default:
-                return <HorizontalReceipt {...props} />;
+            case 'horizontal': return <HorizontalReceipt {...props} />;
+            case 'vertical': return <VerticalReceipt {...props} />;
+            case 'alternate': return <AlternateHorizontalReceipt {...props} />;
+            default: return <HorizontalReceipt {...props} />;
         }
     };
 
     return (
         <div className="container">
             <header>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <Heart color="#2e7d32" fill="#2e7d32" />
-                    <h1 style={{ marginBottom: 0 }}>NGO Receipt Generator</h1>
-                </div>
-                <p style={{ color: '#666' }}>Professional donor receipts, generated 100% in your browser.</p>
+                <h1><Heart color="var(--primary)" fill="var(--primary)" size={32} /> NGO Receipt Generator</h1>
+                <p>Production-grade donor receipts, generated 100% in-browser.</p>
             </header>
 
-            <div className="step-indicator">
-                <div className={`step ${selectedTemplate ? 'active' : ''}`}>1</div>
-                <div className={`step ${ngoData.name ? 'active' : ''}`}>2</div>
-                <div className={`step ${donorData.length > 0 ? 'active' : ''}`}>3</div>
-                <div className={`step ${isGenerating ? 'active' : ''}`}>4</div>
+            <div className="stepper">
+                {steps.map(step => (
+                    <div key={step.id} className={`step-item ${currentStep === step.id ? 'active' : ''} ${currentStep > step.id ? 'completed' : ''}`}>
+                        <div className="step-number">{currentStep > step.id ? '✓' : step.id}</div>
+                        <div className="step-label">{step.label}</div>
+                    </div>
+                ))}
             </div>
 
-            <TemplateSelector
-                selectedTemplate={selectedTemplate}
-                onSelect={setSelectedTemplate}
-            />
+            <div className="card">
+                {currentStep === 1 && (
+                    <TemplateSelector
+                        selectedTemplate={selectedTemplate}
+                        onSelect={setSelectedTemplate}
+                        error={errors.template}
+                    />
+                )}
+                {currentStep === 2 && (
+                    <NGOForm
+                        ngoData={ngoData}
+                        setNgoData={setNgoData}
+                        errors={errors}
+                    />
+                )}
+                {currentStep === 3 && (
+                    <ExcelUploader
+                        onDataParsed={setDonorData}
+                        donorCount={donorData.length}
+                        error={errors.donors}
+                    />
+                )}
+                {currentStep === 4 && (
+                    <ReceiptPreview
+                        donors={donorData}
+                        ngo={ngoData}
+                        isGenerating={isGenerating}
+                        onDownloadAll={handleDownloadAll}
+                    />
+                )}
 
-            <NGOForm
-                ngoData={ngoData}
-                updateNgoData={updateNgoData}
-            />
+                <div className="step-nav">
+                    <button
+                        className="btn btn-secondary"
+                        onClick={handleBack}
+                        disabled={currentStep === 1 || isGenerating}
+                    >
+                        <ChevronLeft size={20} /> Back
+                    </button>
 
-            <ExcelUploader
-                onDataParsed={handleDataParsed}
-                donorCount={donorData.length}
-            />
+                    {currentStep < 4 ? (
+                        <button className="btn btn-primary" onClick={handleNext}>
+                            Next <ChevronRight size={20} />
+                        </button>
+                    ) : (
+                        <button
+                            className="btn btn-primary"
+                            onClick={handleDownloadAll}
+                            disabled={isGenerating || donorData.length === 0}
+                        >
+                            <Download size={20} /> Generate All (ZIP)
+                        </button>
+                    )}
+                </div>
+            </div>
 
-            <ReceiptPreview
-                donors={donorData}
-                ngo={ngoData}
-                onDownloadAll={handleDownloadAll}
-                isGenerating={isGenerating}
-            />
-
-            {/* Hidden container for rendering receipts for PDF capture */}
+            {/* Hidden rendering for PDF capture */}
             <div className="hidden-receipt-container">
-                {renderSelectedTemplate()}
+                {donorData.map(donor => (
+                    <div key={donor.id} id={`receipt-${donor.id}`}>
+                        {renderSelectedTemplate(donor)}
+                    </div>
+                ))}
             </div>
-
-            <footer style={{ textAlign: 'center', marginTop: '4rem', color: '#999', fontSize: '0.875rem' }}>
-                <p>© 2026 NGO Receipt Generator. No data is stored on any server.</p>
-            </footer>
 
             {isGenerating && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.5)',
-                    zIndex: 1000,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    flexDirection: 'column',
-                    gap: '1rem'
-                }}>
-                    <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-                        <div className="loader" style={{
-                            width: '40px', height: '40px',
-                            border: '4px solid #f3f3f3',
-                            borderTop: '4px solid #2e7d32',
-                            borderRadius: '50%',
-                            margin: '0 auto 1rem auto',
-                            animation: 'spin 1s linear infinite'
-                        }}></div>
-                        <h3 style={{ color: 'var(--text-main)' }}>Generating Receipts...</h3>
-                        <p style={{ color: 'var(--text-muted)' }}>Processing Batch Capture (May take a few moments)</p>
+                <div className="loader-overlay">
+                    <div className="loader-card">
+                        <div className="spinner"></div>
+                        <h3>Generating Receipts...</h3>
+                        <p>Processing batch: {generationProgress}%</p>
                     </div>
-                    <style>{`
-            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          `}</style>
                 </div>
             )}
+
+            <footer style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                <p>© 2026 NGO Receipt Generator • Client-Side Only • Secure & Private</p>
+            </footer>
         </div>
     );
 };

@@ -1,100 +1,114 @@
-import React, { useRef } from 'react';
-import * as XLSX from 'xlsx';
-import { Download, FileUp, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { parseExcelData } from '../utils/excelParser';
 
-const ExcelUploader = ({ onDataParsed, donorCount }) => {
-    const fileInputRef = useRef(null);
+const ExcelUploader = ({ onDataParsed, donorCount, error }) => {
+    const [loading, setLoading] = useState(false);
+    const [localErrors, setLocalErrors] = useState([]);
+    const [fileName, setFileName] = useState('');
 
-    const downloadDemoExcel = () => {
-        const data = [
-            ['Date', 'Donor Name', 'Donor PAN', 'Amount', 'Amount in Words'],
-            ['2024-03-01', 'John Doe', 'ABCDE1234F', 5000, 'Five Thousand Only'],
-            ['2024-03-05', 'Jane Smith', 'FGHIJ5678K', 2500, 'Two Thousand Five Hundred Only'],
-            ['2024-03-10', 'Global Tech Corp', 'PQRST9012L', 15000, 'Fifteen Thousand Only'],
-        ];
-
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Donors');
-        XLSX.writeFile(wb, 'NGO_Donation_Demo.xlsx');
-    };
-
-    const handleFileUpload = (e) => {
+    const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const bstr = evt.target.result;
-            const wb = XLSX.read(bstr, { type: 'binary' });
-            const wsname = wb.SheetNames[0];
-            const ws = wb.Sheets[wsname];
-            const data = XLSX.utils.sheet_to_json(ws);
+        if (!file.name.endsWith('.xlsx')) {
+            setLocalErrors(['Please upload a valid .xlsx file']);
+            return;
+        }
 
-            // Validate data
-            const validatedData = data.slice(0, 50).map((row, index) => ({
-                date: row['Date'] || '',
-                name: row['Donor Name'] || 'Unknown Donor',
-                pan: row['Donor PAN'] || 'N/A',
-                amount: row['Amount'] || 0,
-                amountInWords: row['Amount in Words'] || '',
-                receiptNo: `REC-${String(index + 1).padStart(4, '0')}`,
-            }));
+        setFileName(file.name);
+        setLoading(true);
+        setLocalErrors([]);
 
-            onDataParsed(validatedData);
-        };
-        reader.readAsBinaryString(file);
+        try {
+            const { data, errors } = await parseExcelData(file);
+            if (errors.length > 0) {
+                setLocalErrors(errors);
+                onDataParsed([]);
+            } else {
+                onDataParsed(data);
+                setLocalErrors([]);
+            }
+        } catch (err) {
+            setLocalErrors(['Failed to parse Excel file. Ensure it follows the required format.']);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h2>Step 3: Upload Donor Data</h2>
-                <button className="btn btn-outline" onClick={downloadDemoExcel}>
-                    <Download size={18} style={{ marginRight: '0.5rem' }} />
-                    Download Demo Excel
-                </button>
-            </div>
+        <div>
+            <h2 className="section-title">Step 3: Upload Donor Data</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                Upload an Excel file with your donation records (Max 100 donors).
+            </p>
 
-            <div
-                style={{
-                    border: '2px dashed var(--border-color)',
-                    borderRadius: '12px',
-                    padding: '3rem',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    background: donorCount > 0 ? 'rgba(46, 125, 50, 0.02)' : 'transparent',
-                    transition: 'all 0.2s',
-                }}
-                onClick={() => fileInputRef.current.click()}
-            >
-                <FileUp size={48} color={donorCount > 0 ? 'var(--primary-color)' : '#999'} style={{ marginBottom: '1rem' }} />
-                {donorCount > 0 ? (
+            <div className={`uploader-area ${error || localErrors.length > 0 ? 'error' : ''}`} style={{
+                border: '2px dashed var(--border)',
+                borderRadius: '1rem',
+                padding: '3rem',
+                textAlign: 'center',
+                background: '#f8fafc',
+                cursor: 'pointer',
+                position: 'relative'
+            }}>
+                <input
+                    type="file"
+                    accept=".xlsx"
+                    onChange={handleFileChange}
+                    style={{
+                        opacity: 0,
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        cursor: 'pointer',
+                        width: '100%'
+                    }}
+                />
+
+                {loading ? (
                     <div>
-                        <h3 style={{ color: 'var(--primary-color)' }}>{donorCount} Donors Loaded!</h3>
-                        <p>Click to change file</p>
+                        <div className="spinner" style={{ width: '30px', height: '30px', marginBottom: '1rem' }}></div>
+                        <p>Validating Excel Data...</p>
+                    </div>
+                ) : donorCount > 0 ? (
+                    <div>
+                        <CheckCircle2 color="var(--success)" size={48} style={{ margin: '0 auto 1rem' }} />
+                        <h4 style={{ color: 'var(--success)' }}>{donorCount} Donors Loaded Successfully</h4>
+                        <p style={{ fontSize: '0.875rem' }}>File: {fileName}</p>
                     </div>
                 ) : (
                     <div>
-                        <h3>Click to Upload Excel File</h3>
-                        <p style={{ color: '#666' }}>Max 50 rows. Required columns: Date, Donor Name, Donor PAN, Amount, Amount in Words</p>
+                        <FileSpreadsheet color="var(--primary)" size={48} style={{ margin: '0 auto 1rem' }} />
+                        <h4>Click to upload .xlsx file</h4>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                            Required columns: Date, Donor Name, Donor PAN, Amount, Amount in Words
+                        </p>
                     </div>
                 )}
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept=".xlsx, .xls"
-                    style={{ display: 'none' }}
-                />
             </div>
 
-            {donorCount > 50 && (
-                <div style={{ marginTop: '1rem', color: '#d32f2f', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <AlertCircle size={18} />
-                    <p style={{ fontSize: '0.875rem' }}>Note: Only the first 50 rows will be processed.</p>
+            {localErrors.length > 0 && (
+                <div style={{
+                    marginTop: '1.5rem',
+                    padding: '1rem',
+                    background: '#fef2f2',
+                    border: '1px solid #fee2e2',
+                    borderRadius: '0.5rem'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--error)', marginBottom: '0.5rem' }}>
+                        <AlertCircle size={18} />
+                        <span style={{ fontWeight: 700 }}>Validation Errors found:</span>
+                    </div>
+                    <ul style={{ paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#b91c1c' }}>
+                        {localErrors.slice(0, 5).map((err, i) => (
+                            <li key={i}>{err}</li>
+                        ))}
+                        {localErrors.length > 5 && <li>...and {localErrors.length - 5} more errors</li>}
+                    </ul>
                 </div>
             )}
+
+            {error && !localErrors.length && <p className="error-text" style={{ textAlign: 'center', marginTop: '1rem' }}>{error}</p>}
         </div>
     );
 };

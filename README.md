@@ -1,16 +1,24 @@
-# 📜 NGO Donation Receipts Generator
+# 📜 NGO Donation Receipt Generator (Production Grade)
 
-A professional, high-performance React application designed for NGOs to generate and manage donor receipts in bulk. This tool operates entirely in the browser, ensuring maximum privacy and zero server overhead.
+A robust, frontend-only React application designed for NGOs to generate professional, legally-compliant donor receipts in bulk. This tool operates 100% in the browser, ensuring maximum privacy and zero server overhead.
 
 ---
 
 ## ✨ Features
 
-- **🎯 Professional Templates**: Choose from three distinct layouts (Horizontal, Vertical, and Alternate) to suit your brand.
-- **📊 Bulk Processing**: Upload an Excel file with up to 50 donor records and generate all receipts simultaneously.
-- **📦 ZIP Export**: Automatically bundles all generated receipts into a single ZIP file for easy distribution.
-- **🔒 Privacy First**: Your data never leaves your computer. All processing is done locally in your browser.
-- **📱 Responsive Design**: A sleek, modern UI that works perfectly across devices.
+- **🎯 Multi-Step Wizard Flow**: A 4-step guided process (Templates → NGO Details → Excel Upload → Generate).
+- **📋 Legal Compliance**:
+  - Integrated validation for **Indian PAN** format.
+  - Fields for **80G Number**, **NGO Registration**, and **PAN**.
+  - Auto-generated unique receipt numbers (`REC-0001` format).
+- **📊 Robust Excel Utility**:
+  - Bulk processing for up to **50 donors**.
+  - Row-level validation (ensures no bad data enters the receipts).
+  - Clear error reporting for missing columns or malformed data.
+- **📦 High-Fidelity PDF & ZIP Export**:
+  - High-resolution receipt generation using `html2canvas` and `jsPDF`.
+  - Single-click ZIP bundle export for all generated receipts.
+- **🔒 Privacy First**: Zero data is sent to any server. Everything happens on your local machine.
 
 ---
 
@@ -18,7 +26,6 @@ A professional, high-performance React application designed for NGOs to generate
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v18.0.0 or higher)
-- [npm](https://www.npmjs.com/) (usually comes with Node.js)
 
 ### Installation
 
@@ -38,37 +45,41 @@ A professional, high-performance React application designed for NGOs to generate
    npm run dev
    ```
 
-4. **Build for production:**
-   ```bash
-   npm run build
-   ```
+---
+
+## 🧪 Testing
+
+The project includes a comprehensive test suite using **Jest** and **React Testing Library**.
+
+### Run all tests:
+```bash
+npm test
+```
+
+### Test Coverage:
+- **Validation Logic**: Strict PAN, Amount, and NGO detail checks.
+- **Excel Parsing**: Edge cases (>50 rows, missing columns, row errors).
+- **Component Flow**: Multi-step navigation and state preservation.
+- **Utility Logic**: Receipt number formatting and unique ID generation.
 
 ---
 
 ## 🛠 Tech Stack
 
-- **Framework**: [React 18](https://reactjs.org/)
-- **Build Tool**: [Vite](https://vitejs.dev/)
-- **Styling**: Standard CSS with a custom premium design system.
-- **PDF Generation**: `html2canvas` & `jsPDF`
-- **Excel Handling**: `xlsx`
-- **File Utilities**: `JSZip` & `file-saver`
-- **Icons**: `Lucide React`
+- **Framework**: React 18 (Vite)
+- **Icons**: Lucide React
+- **PDF/ZIP**: `html2canvas`, `jsPDF`, `JSZip`, `file-saver`
+- **Excel**: `xlsx` (SheetJS)
+- **Testing**: Jest, React Testing Library
 
 ---
 
-## 📝 Usage Instructions
+## 📝 Usage
 
-1. **Enter NGO Details**: Fill in your NGO's name, address, and upload your logo/signature.
-2. **Template Selection**: Choose your preferred receipt style.
-3. **Data Entry**: Either enter donor details manually or upload an Excel file.
-4. **Generate & Download**: Review the receipts and download them as individual PDFs or a combined ZIP file.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to open issues or submit pull requests to improve the templates or features.
+1. **Step 1**: Select your preferred layout (Horizontal, Vertical, or Alternate).
+2. **Step 2**: Enter your NGO details and upload your logo.
+3. **Step 3**: Upload a `.xlsx` file with donor data.
+4. **Step 4**: Preview the batch list and click **"Generate & Export"** to download the ZIP.
 
 ---
 

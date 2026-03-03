@@ -1,42 +1,36 @@
 import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import jsPDF from 'jspdf';
 
 /**
- * Generates a PDF from a DOM element
- * @param {HTMLElement} element - The DOM element to capture
- * @param {string} filename - The name of the file (without extension)
- * @returns {Promise<Blob>} - Resolves with the PDF as a Blob
+ * Generates a high-quality PDF from a DOM element.
+ * @param {HTMLElement} element 
+ * @param {string} filename 
+ * @returns {Promise<Blob>}
  */
 export const generatePDFBlob = async (element, filename) => {
-    if (!element) return null;
-
     try {
         const canvas = await html2canvas(element, {
-            scale: 2, // Higher scale for better quality
+            scale: 2, // High resolution
             useCORS: true,
             logging: false,
-            backgroundColor: '#ffffff',
         });
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-
-        // Calculate dimensions
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const orientation = imgWidth > imgHeight ? 'l' : 'p';
-
-        // Create PDF with dynamic size based on original aspect ratio
+        const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF({
-            orientation: orientation,
-            unit: 'px',
-            format: [imgWidth, imgHeight],
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4',
         });
 
-        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
 
         return pdf.output('blob');
-    } catch (error) {
-        console.error('Error generating PDF:', error);
-        throw error;
+    } catch (err) {
+        console.error('PDF Generation Error:', err);
+        throw new Error('Failed to generate PDF');
     }
 };
