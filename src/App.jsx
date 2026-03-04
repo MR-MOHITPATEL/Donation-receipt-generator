@@ -9,6 +9,7 @@ import VerticalReceipt from './components/ReceiptTemplates/VerticalReceipt';
 import AlternateHorizontalReceipt from './components/ReceiptTemplates/AlternateHorizontalReceipt';
 import { generateBulkZip } from './utils/generateZip';
 import { validatePAN, validateNGOName, validateRegNo, validate80G } from './utils/validation';
+import WelcomeOverlay from './components/WelcomeOverlay';
 
 const steps = [
     { id: 1, label: 'Templates' },
@@ -18,6 +19,7 @@ const steps = [
 ];
 
 const App = () => {
+    const [showWelcome, setShowWelcome] = useState(true);
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedTemplate, setSelectedTemplate] = useState('horizontal');
     const [ngoData, setNgoData] = useState({
@@ -90,6 +92,7 @@ const App = () => {
 
     return (
         <div className="container">
+            {showWelcome && <WelcomeOverlay onContinue={() => setShowWelcome(false)} />}
             <header>
                 <h1><Heart color="var(--primary)" fill="var(--primary)" size={32} /> NGO Receipt Generator</h1>
                 <p>Production-grade donor receipts, generated 100% in-browser.</p>
